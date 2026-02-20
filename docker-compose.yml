@@ -19,6 +19,9 @@ services:
     build:
       context: ./App
     container_name: csharp_book_app
+    environment:
+      - DB_SERVER=db
+      - INIT_SQL_PATH=/app/init.sql
     depends_on:
       - db
     volumes:

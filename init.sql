@@ -35,11 +35,25 @@ END
 GO
 
 -- Seed Initial Data
-INSERT INTO Authors (Name, Bio) VALUES 
-('Gabriel Garcia Marquez', 'Colombian novelist.'),
-('J.K. Rowling', 'British author, best known for Harry Potter.');
+IF NOT EXISTS (SELECT * FROM Authors WHERE Name = 'Gabriel Garcia Marquez')
+BEGIN
+    INSERT INTO Authors (Name, Bio) VALUES ('Gabriel Garcia Marquez', 'Colombian novelist.');
+END
 
-INSERT INTO Books (Title, ISBN, Price, Stock, AuthorId) VALUES
-('Cien Anos de Soledad', '978-0307474728', 15.99, 100, 1),
-('Harry Potter and the Sorcerers Stone', '978-0590353427', 12.99, 50, 2);
+IF NOT EXISTS (SELECT * FROM Authors WHERE Name = 'J.K. Rowling')
+BEGIN
+    INSERT INTO Authors (Name, Bio) VALUES ('J.K. Rowling', 'British author, best known for Harry Potter.');
+END
+
+IF NOT EXISTS (SELECT * FROM Books WHERE ISBN = '978-0307474728')
+BEGIN
+    INSERT INTO Books (Title, ISBN, Price, Stock, AuthorId) VALUES
+    ('Cien Anos de Soledad', '978-0307474728', 15.99, 100, 1);
+END
+
+IF NOT EXISTS (SELECT * FROM Books WHERE ISBN = '978-0590353427')
+BEGIN
+    INSERT INTO Books (Title, ISBN, Price, Stock, AuthorId) VALUES
+    ('Harry Potter and the Sorcerers Stone', '978-0590353427', 12.99, 50, 2);
+END
 GO

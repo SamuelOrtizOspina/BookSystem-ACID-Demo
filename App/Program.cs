@@ -8,20 +8,22 @@ namespace BookSystem
 {
     class Program
     {
-        // Connection string for Docker container (using 'db' service name)
-        static string connectionString = "Server=db,1433;Database=BookStoreDB;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True;";
+        static string GetConnectionString(string dbName = "BookStoreDB")
+        {
+            string server = Environment.GetEnvironmentVariable("DB_SERVER") ?? "localhost";
+            return $"Server={server},1433;Database={dbName};User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True;";
+        }
 
         static void Main(string[] args)
         {
             Console.WriteLine("=== Sistema de Gestión de Libros (C# + SQL Server) ===");
+            Console.WriteLine($"Conectando a: {Environment.GetEnvironmentVariable("DB_SERVER") ?? "localhost"}");
             Console.WriteLine("Esperando a que la base de datos inicie...");
-            Thread.Sleep(15000); // Simple wait for SQL Server startup
+            Thread.Sleep(5000); // Reduced wait time
 
             try
             {
-                // Initialize Database Schema
                 InitializeDatabase();
-
                 TestConnection();
                 ManipulateData();
                 RunACIDTests();
@@ -35,8 +37,8 @@ namespace BookSystem
         static void InitializeDatabase()
         {
             Console.WriteLine("\n--- Inicializando Base de Datos ---");
-            string connectionStringMaster = "Server=db,1433;Database=master;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True;";
-            string scriptPath = "/app/init.sql";
+            string connectionStringMaster = GetConnectionString("master");
+            string scriptPath = Environment.GetEnvironmentVariable("INIT_SQL_PATH") ?? "../init.sql";
 
             if (!File.Exists(scriptPath))
             {
@@ -74,7 +76,7 @@ namespace BookSystem
         static void TestConnection()
         {
             Console.WriteLine("\n--- Prueba de Conexión ---");
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            using (SqlConnection conn = new SqlConnection(GetConnectionString()))
             {
                 conn.Open();
                 Console.WriteLine("Conexión Exitosa a SQL Server!");
@@ -84,17 +86,29 @@ namespace BookSystem
         static void ManipulateData()
         {
             Console.WriteLine("\n--- Pruebas de Manipulación de Datos (CRUD) ---");
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            using (SqlConnection conn = new SqlConnection(GetConnectionString()))
             {
                 conn.Open();
 
                 // Create (Insert)
                 Console.WriteLine("Insertando nuevo libro...");
-                string insertQuery = "INSERT INTO Books (Title, ISBN, Price, Stock, AuthorId) VALUES ('El Aleph', '978-0307950925', 14.50, 30, 1)";
-                using (SqlCommand cmd = new SqlCommand(insertQuery, conn))
+                string checkQuery = "SELECT COUNT(*) FROM Books WHERE ISBN = '978-0307950925'";
+                using (SqlCommand checkCmd = new SqlCommand(checkQuery, conn))
                 {
-                    int rows = cmd.ExecuteNonQuery();
-                    Console.WriteLine($"Filas insertadas: {rows}");
+                    int count = (int)checkCmd.ExecuteScalar();
+                    if (count == 0)
+                    {
+                        string insertQuery = "INSERT INTO Books (Title, ISBN, Price, Stock, AuthorId) VALUES ('El Aleph', '978-0307950925', 14.50, 30, 1)";
+                        using (SqlCommand cmd = new SqlCommand(insertQuery, conn))
+                        {
+                            int rows = cmd.ExecuteNonQuery();
+                            Console.WriteLine($"Filas insertadas: {rows}");
+                        }
+                    }
+                    else
+                    {
+                         Console.WriteLine("El libro 'El Aleph' ya existe. Saltando inserción.");
+                    }
                 }
 
                 // Read (Select)
@@ -117,7 +131,7 @@ namespace BookSystem
 
             // 1. Atomicity: Transaction Rollback
             Console.WriteLine("\n[A] Atomicidad: Intentando transacción fallida...");
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            using (SqlConnection conn = new SqlConnection(GetConnectionString()))
             {
                 conn.Open();
                 SqlTransaction transaction = conn.BeginTransaction();
@@ -141,7 +155,7 @@ namespace BookSystem
             }
 
             // Verify Rollback
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            using (SqlConnection conn = new SqlConnection(GetConnectionString()))
             {
                 conn.Open();
                 decimal price = (decimal)new SqlCommand("SELECT Price FROM Books WHERE Id = 1", conn).ExecuteScalar();
@@ -150,13 +164,13 @@ namespace BookSystem
 
             // 2. Consistency: Foreign Key Constraint
             Console.WriteLine("\n[C] Consistencia: Intentando violar integridad referencial...");
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            using (SqlConnection conn = new SqlConnection(GetConnectionString()))
             {
                 conn.Open();
                 try
                 {
                     // Try to insert book with non-existent AuthorId (999)
-                    string invalidInsert = "INSERT INTO Books (Title, AuthorId) VALUES ('Libro Invalido', 999)";
+                    string invalidInsert = "INSERT INTO Books (Title, ISBN, Price, Stock, AuthorId) VALUES ('Libro Invalido', '999-9999999999', 10.00, 1, 999)";
                     new SqlCommand(invalidInsert, conn).ExecuteNonQuery();
                 }
                 catch (SqlException ex)
@@ -168,8 +182,8 @@ namespace BookSystem
 
             // 3. Isolation: Simulate Concurrent Updates
             Console.WriteLine("\n[I] Aislamiento: Simulando lectura sucia (Dirty Read prevention)...");
-            using (SqlConnection conn1 = new SqlConnection(connectionString))
-            using (SqlConnection conn2 = new SqlConnection(connectionString))
+            using (SqlConnection conn1 = new SqlConnection(GetConnectionString()))
+            using (SqlConnection conn2 = new SqlConnection(GetConnectionString()))
             {
                 conn1.Open();
                 conn2.Open();
