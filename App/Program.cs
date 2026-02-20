@@ -38,14 +38,33 @@ namespace BookSystem
         {
             Console.WriteLine("\n--- Inicializando Base de Datos ---");
             string connectionStringMaster = GetConnectionString("master");
-            string scriptPath = Environment.GetEnvironmentVariable("INIT_SQL_PATH") ?? "../init.sql";
+            
+            // Look for init.sql in current directory or parent directory
+            string scriptPath = Environment.GetEnvironmentVariable("INIT_SQL_PATH") ?? "init.sql";
+            if (!File.Exists(scriptPath))
+            {
+                scriptPath = Path.Combine("..", "init.sql");
+            }
 
             if (!File.Exists(scriptPath))
             {
-                Console.WriteLine($"Advertencia: No se encontró el archivo '{scriptPath}'. Asumiendo que la BD ya existe.");
+                // Try one more level or absolute path if needed, but usually it's in root
+                scriptPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "init.sql");
+            }
+
+            if (!File.Exists(scriptPath))
+            {
+                // Fallback for Docker context if not set
+                scriptPath = "/app/init.sql";
+            }
+
+            if (!File.Exists(scriptPath))
+            {
+                Console.WriteLine($"Advertencia: No se encontró el archivo 'init.sql'. Se buscó en varias rutas. Asumiendo que la BD ya existe.");
                 return;
             }
 
+            Console.WriteLine($"Usando script de inicialización: {Path.GetFullPath(scriptPath)}");
             string script = File.ReadAllText(scriptPath);
             
             // Split script by 'GO' command (SQL Server batch separator)
