@@ -1,10 +1,10 @@
-# 📚 BookSystem-ACID-Demo
+# BookSystem-ACID-Demo
 
 Este es un sistema de gestión de libros desarrollado en **C#** con **MS SQL Server**, diseñado para demostrar la implementación de arquitecturas relacionales, manejo de transacciones y cumplimiento de propiedades **ACID** en un entorno contenedorizado con **Docker**.
 
 ---
 
-## 🚀 Características Principales
+## Características Principales
 
 - **Full Stack Dockerized:** Aplicación y base de datos orquestadas con Docker Compose.
 - **Auto-Provisioning:** Script SQL automático para la creación de esquemas y seeding de datos.
@@ -14,7 +14,7 @@ Este es un sistema de gestión de libros desarrollado en **C#** con **MS SQL Ser
 
 ---
 
-## 🛠️ Stack Tecnológico
+## Stack Tecnológico
 
 - **Lenguaje:** C# (.NET 8.0)
 - **Base de Datos:** Microsoft SQL Server 2022
@@ -24,7 +24,7 @@ Este es un sistema de gestión de libros desarrollado en **C#** con **MS SQL Ser
 
 ---
 
-## 📂 Modelo de Datos (DER)
+## Modelo de Datos (DER)
 
 El sistema gestiona una relación **Uno a Muchos (1:N)**:
 
@@ -46,7 +46,7 @@ Este proyecto incluye una suite de pruebas para garantizar la fiabilidad de los 
 
 ---
 
-## ⚙️ Cómo Ejecutar
+## Cómo Ejecutar
 
 ### Opción 1: Docker (Recomendado)
 
@@ -69,7 +69,7 @@ docker logs csharp_book_app
 
 ---
 
-## 🔗 Conexión Remota
+## Conexión Remota
 
 Puedes conectar herramientas externas (Azure Data Studio, SSMS) usando:
 - **Server:** `localhost,1433`
@@ -79,7 +79,7 @@ Puedes conectar herramientas externas (Azure Data Studio, SSMS) usando:
 
 ---
 
-## 📝 Documentación
+## Documentación
 Para un análisis técnico más profundo, consulta el archivo [DOCUMENTATION.md](./DOCUMENTATION.md).
 
 ---
