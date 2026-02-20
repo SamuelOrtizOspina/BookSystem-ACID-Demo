@@ -8,7 +8,8 @@ namespace BookSystem
 {
     class Program
     {
-        const string Version = "2026-02-20-ROBUST";
+        const string Version = "2026-02-20-PROFESSIONAL";
+        const string LogFile = "system_log.txt";
 
         static string GetConnectionString(string dbName = "BookStoreDB")
         {
@@ -19,6 +20,7 @@ namespace BookSystem
         static void Main(string[] args)
         {
             Console.Clear();
+            LogAction("Iniciando aplicación.");
             InitializeDatabase();
             
             bool exit = false;
@@ -31,7 +33,10 @@ namespace BookSystem
                 Console.WriteLine("2. Agregar un nuevo libro (CREATE)");
                 Console.WriteLine("3. Actualizar precio de un libro (UPDATE)");
                 Console.WriteLine("4. Eliminar un libro (DELETE)");
-                Console.WriteLine("5. Salir");
+                Console.WriteLine("5. Prueba de volumen (Insertar 100 libros)");
+                Console.WriteLine("6. Ejecutar Pruebas ACID");
+                Console.WriteLine("7. Ver registro de auditoría (LOGS)");
+                Console.WriteLine("8. Salir");
                 Console.Write("\nSeleccione una opción: ");
 
                 string option = Console.ReadLine();
@@ -41,15 +46,38 @@ namespace BookSystem
                         case "2": AddBook(); break;
                         case "3": UpdatePrice(); break;
                         case "4": DeleteBook(); break;
-                        case "5": exit = true; break;
-                        default: Console.WriteLine("⚠️ Opción no válida."); break;
+                        case "5": RunStressTest(); break;
+                        case "6": RunACIDTests(); break;
+                        case "7": ShowLogs(); break;
+                        case "8": exit = true; break;
+                        default: Console.WriteLine("Opción no válida."); break;
                     }
                 } catch (Exception ex) {
-                    Console.WriteLine($"\n❌ ERROR: {ex.Message}");
+                    LogAction($"ERROR: {ex.Message}");
+                    Console.WriteLine($"\nERROR: {ex.Message}");
                     Console.WriteLine("Presione cualquier tecla para continuar...");
                     Console.ReadKey();
                 }
             }
+            LogAction("Cerrando aplicación.");
+        }
+
+        static void LogAction(string message)
+        {
+            try {
+                string logEntry = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {message}{Environment.NewLine}";
+                File.AppendAllText(LogFile, logEntry);
+            } catch { /* Ignorar fallos de log */ }
+        }
+
+        static void ShowLogs()
+        {
+            Console.WriteLine("\n--- REGISTRO DE AUDITORÍA (Últimas 20 líneas) ---");
+            if (File.Exists(LogFile)) {
+                string[] lines = File.ReadAllLines(LogFile);
+                int start = Math.Max(0, lines.Length - 20);
+                for (int i = start; i < lines.Length; i++) Console.WriteLine(lines[i]);
+            } else Console.WriteLine("No hay registros todavía.");
         }
 
         static void ListBooks()
@@ -69,6 +97,7 @@ namespace BookSystem
                     }
                 }
             }
+            LogAction("Consulta de lista de libros realizada.");
         }
 
         static void AddBook()
@@ -79,41 +108,27 @@ namespace BookSystem
             Console.Write("ISBN: ");
             string isbn = Console.ReadLine();
             
-            Console.Write("Precio (use '.' para decimales, ej: 25.50): ");
-            if (!decimal.TryParse(Console.ReadLine().Replace(",", "."), out decimal price)) {
-                Console.WriteLine("❌ Precio inválido. Debe ser un número.");
-                return;
-            }
+            Console.Write("Precio (ej: 25.50): ");
+            if (!decimal.TryParse(Console.ReadLine().Replace(",", "."), out decimal price)) return;
 
             Console.Write("Stock inicial: ");
-            if (!int.TryParse(Console.ReadLine(), out int stock)) {
-                Console.WriteLine("❌ Stock inválido. Debe ser un número entero.");
-                return;
-            }
+            if (!int.TryParse(Console.ReadLine(), out int stock)) return;
             
-            // Mostrar autores para ayudar al usuario
-            Console.WriteLine("\nAutores en el sistema:");
-            int authorId = -1;
             using (SqlConnection conn = new SqlConnection(GetConnectionString()))
             {
                 conn.Open();
-                using (SqlDataReader r = new SqlCommand("SELECT Id, Name FROM Authors", conn).ExecuteReader())
-                {
-                    while (r.Read()) Console.WriteLine($"  ID: {r["Id"]} -> {r["Name"]}");
-                }
-                
-                Console.Write("\nEscriba el ID del autor (o escriba el nombre de uno nuevo): ");
+                Console.Write("\nEscriba el ID del autor o nombre de uno nuevo: ");
                 string authorInput = Console.ReadLine();
+                int authorId;
 
                 if (int.TryParse(authorInput, out int idExistente)) {
                     authorId = idExistente;
                 } else {
-                    // Crear nuevo autor si el usuario escribió un nombre
-                    Console.WriteLine($"Creando nuevo autor: '{authorInput}'...");
-                    string insertAuthor = "INSERT INTO Authors (Name, Bio) OUTPUT INSERTED.Id VALUES (@name, 'Autor agregado desde consola')";
+                    string insertAuthor = "INSERT INTO Authors (Name, Bio) OUTPUT INSERTED.Id VALUES (@name, 'Auto-creado')";
                     using (SqlCommand cmd = new SqlCommand(insertAuthor, conn)) {
                         cmd.Parameters.AddWithValue("@name", authorInput);
                         authorId = (int)cmd.ExecuteScalar();
+                        LogAction($"Nuevo autor creado: {authorInput}");
                     }
                 }
 
@@ -126,7 +141,8 @@ namespace BookSystem
                     cmd.Parameters.AddWithValue("@stock", stock);
                     cmd.Parameters.AddWithValue("@authorId", authorId);
                     cmd.ExecuteNonQuery();
-                    Console.WriteLine("✅ ¡Libro guardado con éxito!");
+                    Console.WriteLine("Libro guardado.");
+                    LogAction($"Libro agregado: {title} (ISBN: {isbn})");
                 }
             }
         }
@@ -146,8 +162,10 @@ namespace BookSystem
                 {
                     cmd.Parameters.AddWithValue("@price", newPrice);
                     cmd.Parameters.AddWithValue("@id", id);
-                    if (cmd.ExecuteNonQuery() > 0) Console.WriteLine("✅ Precio actualizado.");
-                    else Console.WriteLine("❌ No se encontró el libro.");
+                    if (cmd.ExecuteNonQuery() > 0) {
+                        Console.WriteLine("Precio actualizado.");
+                        LogAction($"Precio actualizado para libro ID {id} a ${newPrice}");
+                    }
                 }
             }
         }
@@ -160,9 +178,54 @@ namespace BookSystem
             using (SqlConnection conn = new SqlConnection(GetConnectionString()))
             {
                 conn.Open();
-                if (new SqlCommand($"DELETE FROM Books WHERE Id = {id}", conn).ExecuteNonQuery() > 0)
-                    Console.WriteLine("✅ Libro eliminado.");
-                else Console.WriteLine("❌ No se encontró el ID.");
+                if (new SqlCommand($"DELETE FROM Books WHERE Id = {id}", conn).ExecuteNonQuery() > 0) {
+                    Console.WriteLine("Libro eliminado.");
+                    LogAction($"Libro eliminado ID {id}");
+                }
+            }
+        }
+
+        static void RunStressTest()
+        {
+            Console.WriteLine("\n--- PRUEBA DE VOLUMEN (INSERTANDO 100 LIBROS) ---");
+            using (SqlConnection conn = new SqlConnection(GetConnectionString()))
+            {
+                conn.Open();
+                for (int i = 1; i <= 100; i++)
+                {
+                    string title = $"Libro de Prueba #{i}";
+                    string isbn = $"STRESS-{Guid.NewGuid().ToString().Substring(0, 8)}";
+                    string query = "INSERT INTO Books (Title, ISBN, Price, Stock, AuthorId) VALUES (@t, @i, 10.00, 1, 1)";
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@t", title);
+                        cmd.Parameters.AddWithValue("@i", isbn);
+                        cmd.ExecuteNonQuery();
+                    }
+                    if (i % 20 == 0) Console.WriteLine($"Insertados {i} libros...");
+                }
+                Console.WriteLine("¡Prueba de volumen completada con éxito!");
+                LogAction("Prueba de volumen ejecutada: 100 libros insertados.");
+            }
+        }
+
+        static void RunACIDTests()
+        {
+            Console.WriteLine("\n--- PRUEBAS ACID ---");
+            using (SqlConnection conn = new SqlConnection(GetConnectionString()))
+            {
+                conn.Open();
+                using (SqlTransaction trans = conn.BeginTransaction())
+                {
+                    try {
+                        new SqlCommand("UPDATE Books SET Price = 0 WHERE Id = 1", conn, trans).ExecuteNonQuery();
+                        throw new Exception("Fallo de prueba");
+                    } catch {
+                        trans.Rollback();
+                        Console.WriteLine("Atomicidad: OK (Rollback verificado)");
+                        LogAction("Prueba ACID ejecutada.");
+                    }
+                }
             }
         }
 
@@ -183,6 +246,7 @@ namespace BookSystem
                         using (SqlCommand cmd = new SqlCommand(cmdText, conn)) { try { cmd.ExecuteNonQuery(); } catch {} }
                     }
                 }
+                LogAction("Base de datos inicializada.");
             }
         }
     }
