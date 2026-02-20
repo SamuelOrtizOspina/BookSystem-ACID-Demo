@@ -35,7 +35,7 @@ El script `init.sql` asegura que la base de datos `BookStoreDB` se cree con las 
 
 ---
 
-## 🧪 Pruebas ACID (Justificación)
+## Pruebas ACID (Justificación)
 
 Este proyecto incluye una suite de pruebas para garantizar la fiabilidad de los datos:
 
