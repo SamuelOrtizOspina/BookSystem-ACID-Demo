@@ -6,63 +6,55 @@ Este proyecto es un sistema de información desarrollado en **C#** con una base 
 
 El sistema utiliza una arquitectura de contenedores para asegurar que sea portable y fácil de desplegar.
 
-- **Aplicación (App):** Desarrollada en .NET 8.0, se encarga de la lógica de negocio, inicialización de la base de datos y ejecución de pruebas.
-- **Base de Datos (DB):** Motor MS SQL Server 2022 corriendo en un contenedor dedicado.
-- **Orquestación:** Docker Compose gestiona la red y el ciclo de vida de ambos servicios.
+- **Aplicación (App):** Interfaz de consola interactiva desarrollada en .NET 8.0.
+- **Base de Datos (DB):** Motor MS SQL Server 2022 en un contenedor Docker.
+- **Orquestación:** Docker Compose para la gestión de servicios y redes.
 
 ## 2. Modelo de Datos
 
 ### Entidades y Relaciones
-- **Authors (Autores):** Almacena `Id`, `Name` y `Bio`.
-- **Books (Libros):** Almacena `Id`, `Title`, `ISBN`, `Price`, `Stock` y `AuthorId`.
-- **Relación:** 1:N (Un Autor -> Muchos Libros). Implementado mediante una Constraint de Llave Foránea (`FK_Books_Authors`).
+- **Authors (Autores):** `Id`, `Name`, `Bio`.
+- **Books (Libros):** `Id`, `Title`, `ISBN`, `Price`, `Stock`, `AuthorId`.
+- **Relación:** 1:N (Un Autor -> Muchos Libros). Implementado con Llave Foránea.
 
-### Script de Inicialización (`init.sql`)
-El sistema crea automáticamente la base de datos `BookStoreDB` y las tablas necesarias al iniciar, incluyendo datos semilla (seed data) para pruebas inmediatas.
+### Inicialización Inteligente
+El sistema localiza automáticamente el archivo `init.sql` en múltiples rutas y asegura que la base de datos `BookStoreDB` esté lista antes de permitir la interacción del usuario.
 
-## 3. Pruebas ACID Implementadas
+## 3. Características de la Interfaz Interactiva
 
-El sistema incluye una suite de pruebas para validar las propiedades fundamentales de las bases de datos relacionales:
+El sistema ha sido evolucionado a una herramienta **CRUD Robusta**:
+- **Validación de Datos:** Manejo de errores de formato en entradas numéricas (precios y stock) para evitar cierres inesperados.
+- **Creación Dinámica de Autores:** Al agregar un libro, el usuario puede elegir un ID existente o escribir el nombre de un nuevo autor, el cual se registra automáticamente en la base de datos.
+- **Menú de Navegación:** Opciones numeradas para Crear, Leer, Actualizar y Borrar registros en tiempo real.
+
+## 4. Pruebas ACID Implementadas
 
 ### **A - Atomicidad (Atomicity)**
-- **Prueba:** Se inicia una transacción que intenta actualizar el precio de un libro y luego lanza una excepción intencional antes del `Commit`.
-- **Justificación:** Se verifica que el sistema realice un `Rollback` automático. El precio del libro no cambia, demostrando que la operación es "todo o nada".
+- **Prueba:** Transacción con fallo simulado y `Rollback`.
+- **Justificación:** Garantiza que las operaciones financieras o de stock sean "todo o nada".
 
 ### **C - Consistencia (Consistency)**
-- **Prueba:** Se intenta insertar un libro con un `AuthorId` que no existe en la tabla de Autores (ID 999).
-- **Justificación:** SQL Server rechaza la inserción debido a la violación de integridad referencial (FK). Esto garantiza que no existan registros "huérfanos".
+- **Prueba:** Violación de integridad referencial.
+- **Justificación:** Impide la entrada de datos que rompan las reglas de la base de datos.
 
 ### **I - Aislamiento (Isolation)**
-- **Prueba:** Se simulan dos transacciones concurrentes. La T1 modifica el stock pero no confirma (no hace commit). La T2 intenta leer ese stock.
-- **Justificación:** El sistema previene "lecturas sucias" (Dirty Reads). La T2 lee el valor original hasta que la T1 confirme sus cambios, manteniendo la integridad visual de los datos.
+- **Prueba:** Prevención de "lecturas sucias" (Dirty Reads).
+- **Justificación:** Asegura que los cambios no confirmados no afecten a otros usuarios.
 
 ### **D - Durabilidad (Durability)**
-- **Justificación:** Una vez que la transacción recibe el `Commit`, SQL Server garantiza que los cambios persistan en el almacenamiento físico mediante el mecanismo de *Write-Ahead Logging* (WAL), incluso si hay un fallo de energía o reinicio del contenedor.
+- **Justificación:** Garantía de persistencia física tras el `Commit` (WAL).
 
-## 4. Instrucciones de Ejecución
+## 5. Instrucciones de Ejecución
 
-### Requisitos
-- Docker y Docker Compose instalados.
-- (Opcional) SDK de .NET 8.0 para ejecución local.
-
-### Despliegue con Docker (Recomendado)
-Para levantar todo el sistema automáticamente:
+### Despliegue con Docker
 ```powershell
 docker-compose up -d --build
 ```
 
-### Ver Resultados de las Pruebas
-Para ver la ejecución de las pruebas CRUD y ACID en tiempo real:
+### Ejecución de la Interfaz
 ```powershell
-docker logs csharp_book_app
+dotnet run --project App/BookSystem.csproj
 ```
 
-## 5. Configuración de Conexión Remota
-El servidor SQL está configurado para escuchar en el puerto **1433**. Se puede acceder desde herramientas externas (como Azure Data Studio o SSMS) utilizando:
-- **Server:** localhost,1433
-- **User:** sa
-- **Password:** YourStrong!Passw0rd
-- **TrustServerCertificate:** True
-
 ---
-*Documentación generada para el Proyecto de Sistemas de Información.*
+*Documentación técnica actualizada el 20 de Febrero de 2026.*

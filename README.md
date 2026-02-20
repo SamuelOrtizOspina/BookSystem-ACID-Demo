@@ -1,20 +1,21 @@
-# BookSystem-ACID-Demo
+# 📚 BookSystem-ACID-Demo
 
 Este es un sistema de gestión de libros desarrollado en **C#** con **MS SQL Server**, diseñado para demostrar la implementación de arquitecturas relacionales, manejo de transacciones y cumplimiento de propiedades **ACID** en un entorno contenedorizado con **Docker**.
 
 ---
 
-## Características Principales
+## 🚀 Características Principales
 
+- **Interfaz Interactiva:** Menú de consola amigable para gestionar datos en tiempo real.
+- **Robustez y Validación:** Sistema a prueba de fallos de formato en entradas de precio y stock.
+- **Carga de Autores Inteligente:** Permite seleccionar autores existentes o crear uno nuevo simplemente escribiendo su nombre.
 - **Full Stack Dockerized:** Aplicación y base de datos orquestadas con Docker Compose.
 - **Auto-Provisioning:** Script SQL automático para la creación de esquemas y seeding de datos.
-- **Relational Integrity:** Implementación de llaves foráneas y restricciones de datos.
 - **ACID Testing Suite:** Módulo integrado para validar Atomicidad, Consistencia, Aislamiento y Durabilidad.
-- **Dual Runtime:** Capacidad de ejecución local (.NET SDK) o mediante contenedores.
 
 ---
 
-## Stack Tecnológico
+## 🛠️ Stack Tecnológico
 
 - **Lenguaje:** C# (.NET 8.0)
 - **Base de Datos:** Microsoft SQL Server 2022
@@ -24,7 +25,7 @@ Este es un sistema de gestión de libros desarrollado en **C#** con **MS SQL Ser
 
 ---
 
-## Modelo de Datos (DER)
+## 📂 Modelo de Datos (DER)
 
 El sistema gestiona una relación **Uno a Muchos (1:N)**:
 
@@ -35,7 +36,7 @@ El script `init.sql` asegura que la base de datos `BookStoreDB` se cree con las 
 
 ---
 
-## Pruebas ACID (Justificación)
+## 🧪 Pruebas ACID (Justificación)
 
 Este proyecto incluye una suite de pruebas para garantizar la fiabilidad de los datos:
 
@@ -46,7 +47,7 @@ Este proyecto incluye una suite de pruebas para garantizar la fiabilidad de los 
 
 ---
 
-## Cómo Ejecutar
+## ⚙️ Cómo Ejecutar
 
 ### Opción 1: Docker (Recomendado)
 
@@ -56,20 +57,19 @@ Solo necesitas tener Docker instalado. Ejecuta:
 docker-compose up -d --build
 ```
 
-Para ver las pruebas en ejecución:
-```powershell
-docker logs csharp_book_app
-```
+### Opción 2: Ejecución Local e Interacción (Directa)
 
-### Opción 2: Ejecución Local
+Para interactuar con el menú y agregar tus propios libros:
 
 1.  Inicia solo la base de datos: `docker-compose up -d db`
-2.  Entra en la carpeta del proyecto: `cd App`
-3.  Ejecuta la aplicación: `dotnet run`
+2.  Ejecuta la aplicación:
+```powershell
+dotnet run --project App/BookSystem.csproj
+```
 
 ---
 
-## Conexión Remota
+## 🔗 Conexión Remota
 
 Puedes conectar herramientas externas (Azure Data Studio, SSMS) usando:
 - **Server:** `localhost,1433`
@@ -79,7 +79,7 @@ Puedes conectar herramientas externas (Azure Data Studio, SSMS) usando:
 
 ---
 
-## Documentación
+## 📝 Documentación
 Para un análisis técnico más profundo, consulta el archivo [DOCUMENTATION.md](./DOCUMENTATION.md).
 
 ---

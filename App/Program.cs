@@ -1,232 +1,189 @@
 using System;
-using System.Data.SqlClient;
-using System.Threading;
+using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using Microsoft.Data.SqlClient;
 
 namespace BookSystem
 {
     class Program
     {
+        const string Version = "2026-02-20-ROBUST";
+
         static string GetConnectionString(string dbName = "BookStoreDB")
         {
             string server = Environment.GetEnvironmentVariable("DB_SERVER") ?? "localhost";
-            return $"Server={server},1433;Database={dbName};User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True;";
+            return $"Server={server},1433;Database={dbName};User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True;Connect Timeout=30;";
         }
 
         static void Main(string[] args)
         {
-            Console.WriteLine("=== Sistema de Gestión de Libros (C# + SQL Server) ===");
-            Console.WriteLine($"Conectando a: {Environment.GetEnvironmentVariable("DB_SERVER") ?? "localhost"}");
-            Console.WriteLine("Esperando a que la base de datos inicie...");
-            Thread.Sleep(5000); // Reduced wait time
+            Console.Clear();
+            InitializeDatabase();
+            
+            bool exit = false;
+            while (!exit)
+            {
+                Console.WriteLine($"\n=====================================================");
+                Console.WriteLine($"   SISTEMA DE GESTIÓN DE LIBROS - Versión: {Version}");
+                Console.WriteLine($"=====================================================");
+                Console.WriteLine("1. Ver lista de libros (READ)");
+                Console.WriteLine("2. Agregar un nuevo libro (CREATE)");
+                Console.WriteLine("3. Actualizar precio de un libro (UPDATE)");
+                Console.WriteLine("4. Eliminar un libro (DELETE)");
+                Console.WriteLine("5. Salir");
+                Console.Write("\nSeleccione una opción: ");
 
-            try
-            {
-                InitializeDatabase();
-                TestConnection();
-                ManipulateData();
-                RunACIDTests();
+                string option = Console.ReadLine();
+                try {
+                    switch (option) {
+                        case "1": ListBooks(); break;
+                        case "2": AddBook(); break;
+                        case "3": UpdatePrice(); break;
+                        case "4": DeleteBook(); break;
+                        case "5": exit = true; break;
+                        default: Console.WriteLine("⚠️ Opción no válida."); break;
+                    }
+                } catch (Exception ex) {
+                    Console.WriteLine($"\n❌ ERROR: {ex.Message}");
+                    Console.WriteLine("Presione cualquier tecla para continuar...");
+                    Console.ReadKey();
+                }
             }
-            catch (Exception ex)
+        }
+
+        static void ListBooks()
+        {
+            Console.WriteLine("\n--- LISTADO DE LIBROS ---");
+            using (SqlConnection conn = new SqlConnection(GetConnectionString()))
             {
-                Console.WriteLine($"Error crítico: {ex.Message}");
+                conn.Open();
+                string query = "SELECT B.Id, B.Title, B.ISBN, B.Price, B.Stock, A.Name as AuthorName FROM Books B JOIN Authors A ON B.AuthorId = A.Id";
+                using (SqlCommand cmd = new SqlCommand(query, conn))
+                using (SqlDataReader reader = cmd.ExecuteReader())
+                {
+                    if (!reader.HasRows) Console.WriteLine("No hay libros registrados.");
+                    while (reader.Read())
+                    {
+                        Console.WriteLine($"ID: {reader["Id"]} | Título: {reader["Title"]} | Precio: ${reader["Price"]} | Autor: {reader["AuthorName"]}");
+                    }
+                }
+            }
+        }
+
+        static void AddBook()
+        {
+            Console.WriteLine("\n--- AGREGAR NUEVO LIBRO ---");
+            Console.Write("Título del libro: ");
+            string title = Console.ReadLine();
+            Console.Write("ISBN: ");
+            string isbn = Console.ReadLine();
+            
+            Console.Write("Precio (use '.' para decimales, ej: 25.50): ");
+            if (!decimal.TryParse(Console.ReadLine().Replace(",", "."), out decimal price)) {
+                Console.WriteLine("❌ Precio inválido. Debe ser un número.");
+                return;
+            }
+
+            Console.Write("Stock inicial: ");
+            if (!int.TryParse(Console.ReadLine(), out int stock)) {
+                Console.WriteLine("❌ Stock inválido. Debe ser un número entero.");
+                return;
+            }
+            
+            // Mostrar autores para ayudar al usuario
+            Console.WriteLine("\nAutores en el sistema:");
+            int authorId = -1;
+            using (SqlConnection conn = new SqlConnection(GetConnectionString()))
+            {
+                conn.Open();
+                using (SqlDataReader r = new SqlCommand("SELECT Id, Name FROM Authors", conn).ExecuteReader())
+                {
+                    while (r.Read()) Console.WriteLine($"  ID: {r["Id"]} -> {r["Name"]}");
+                }
+                
+                Console.Write("\nEscriba el ID del autor (o escriba el nombre de uno nuevo): ");
+                string authorInput = Console.ReadLine();
+
+                if (int.TryParse(authorInput, out int idExistente)) {
+                    authorId = idExistente;
+                } else {
+                    // Crear nuevo autor si el usuario escribió un nombre
+                    Console.WriteLine($"Creando nuevo autor: '{authorInput}'...");
+                    string insertAuthor = "INSERT INTO Authors (Name, Bio) OUTPUT INSERTED.Id VALUES (@name, 'Autor agregado desde consola')";
+                    using (SqlCommand cmd = new SqlCommand(insertAuthor, conn)) {
+                        cmd.Parameters.AddWithValue("@name", authorInput);
+                        authorId = (int)cmd.ExecuteScalar();
+                    }
+                }
+
+                string query = "INSERT INTO Books (Title, ISBN, Price, Stock, AuthorId) VALUES (@title, @isbn, @price, @stock, @authorId)";
+                using (SqlCommand cmd = new SqlCommand(query, conn))
+                {
+                    cmd.Parameters.AddWithValue("@title", title);
+                    cmd.Parameters.AddWithValue("@isbn", isbn);
+                    cmd.Parameters.AddWithValue("@price", price);
+                    cmd.Parameters.AddWithValue("@stock", stock);
+                    cmd.Parameters.AddWithValue("@authorId", authorId);
+                    cmd.ExecuteNonQuery();
+                    Console.WriteLine("✅ ¡Libro guardado con éxito!");
+                }
+            }
+        }
+
+        static void UpdatePrice()
+        {
+            Console.Write("\nID del libro a actualizar: ");
+            if (!int.TryParse(Console.ReadLine(), out int id)) return;
+            Console.Write("Nuevo precio: ");
+            if (!decimal.TryParse(Console.ReadLine().Replace(",", "."), out decimal newPrice)) return;
+
+            using (SqlConnection conn = new SqlConnection(GetConnectionString()))
+            {
+                conn.Open();
+                string query = "UPDATE Books SET Price = @price WHERE Id = @id";
+                using (SqlCommand cmd = new SqlCommand(query, conn))
+                {
+                    cmd.Parameters.AddWithValue("@price", newPrice);
+                    cmd.Parameters.AddWithValue("@id", id);
+                    if (cmd.ExecuteNonQuery() > 0) Console.WriteLine("✅ Precio actualizado.");
+                    else Console.WriteLine("❌ No se encontró el libro.");
+                }
+            }
+        }
+
+        static void DeleteBook()
+        {
+            Console.Write("\nID del libro a eliminar: ");
+            if (!int.TryParse(Console.ReadLine(), out int id)) return;
+
+            using (SqlConnection conn = new SqlConnection(GetConnectionString()))
+            {
+                conn.Open();
+                if (new SqlCommand($"DELETE FROM Books WHERE Id = {id}", conn).ExecuteNonQuery() > 0)
+                    Console.WriteLine("✅ Libro eliminado.");
+                else Console.WriteLine("❌ No se encontró el ID.");
             }
         }
 
         static void InitializeDatabase()
         {
-            Console.WriteLine("\n--- Inicializando Base de Datos ---");
             string connectionStringMaster = GetConnectionString("master");
+            string scriptPath = "init.sql";
+            if (!File.Exists(scriptPath)) scriptPath = "../init.sql";
+            if (!File.Exists(scriptPath)) scriptPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "init.sql");
             
-            // Look for init.sql in current directory or parent directory
-            string scriptPath = Environment.GetEnvironmentVariable("INIT_SQL_PATH") ?? "init.sql";
-            if (!File.Exists(scriptPath))
-            {
-                scriptPath = Path.Combine("..", "init.sql");
-            }
-
-            if (!File.Exists(scriptPath))
-            {
-                // Try one more level or absolute path if needed, but usually it's in root
-                scriptPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "init.sql");
-            }
-
-            if (!File.Exists(scriptPath))
-            {
-                // Fallback for Docker context if not set
-                scriptPath = "/app/init.sql";
-            }
-
-            if (!File.Exists(scriptPath))
-            {
-                Console.WriteLine($"Advertencia: No se encontró el archivo 'init.sql'. Se buscó en varias rutas. Asumiendo que la BD ya existe.");
-                return;
-            }
-
-            Console.WriteLine($"Usando script de inicialización: {Path.GetFullPath(scriptPath)}");
-            string script = File.ReadAllText(scriptPath);
-            
-            // Split script by 'GO' command (SQL Server batch separator)
-            string[] commands = script.Split(new string[] { "GO", "go", "Go" }, StringSplitOptions.RemoveEmptyEntries);
-
-            using (SqlConnection conn = new SqlConnection(connectionStringMaster))
-            {
-                conn.Open();
-                foreach (string command in commands)
-                {
-                    if (string.IsNullOrWhiteSpace(command)) continue;
-                    try
-                    {
-                        using (SqlCommand cmd = new SqlCommand(command, conn))
-                        {
-                            cmd.ExecuteNonQuery();
-                        }
-                    }
-                    catch (SqlException ex)
-                    {
-                        Console.WriteLine($"Error ejecutando script SQL: {ex.Message}");
-                    }
-                }
-                Console.WriteLine("Base de datos inicializada correctamente.");
-            }
-        }
-
-        static void TestConnection()
-        {
-            Console.WriteLine("\n--- Prueba de Conexión ---");
-            using (SqlConnection conn = new SqlConnection(GetConnectionString()))
-            {
-                conn.Open();
-                Console.WriteLine("Conexión Exitosa a SQL Server!");
-            }
-        }
-
-        static void ManipulateData()
-        {
-            Console.WriteLine("\n--- Pruebas de Manipulación de Datos (CRUD) ---");
-            using (SqlConnection conn = new SqlConnection(GetConnectionString()))
-            {
-                conn.Open();
-
-                // Create (Insert)
-                Console.WriteLine("Insertando nuevo libro...");
-                string checkQuery = "SELECT COUNT(*) FROM Books WHERE ISBN = '978-0307950925'";
-                using (SqlCommand checkCmd = new SqlCommand(checkQuery, conn))
-                {
-                    int count = (int)checkCmd.ExecuteScalar();
-                    if (count == 0)
-                    {
-                        string insertQuery = "INSERT INTO Books (Title, ISBN, Price, Stock, AuthorId) VALUES ('El Aleph', '978-0307950925', 14.50, 30, 1)";
-                        using (SqlCommand cmd = new SqlCommand(insertQuery, conn))
-                        {
-                            int rows = cmd.ExecuteNonQuery();
-                            Console.WriteLine($"Filas insertadas: {rows}");
-                        }
-                    }
-                    else
-                    {
-                         Console.WriteLine("El libro 'El Aleph' ya existe. Saltando inserción.");
-                    }
-                }
-
-                // Read (Select)
-                Console.WriteLine("Leyendo libros de Gabriel Garcia Marquez...");
-                string selectQuery = "SELECT Title, Price FROM Books WHERE AuthorId = 1";
-                using (SqlCommand cmd = new SqlCommand(selectQuery, conn))
-                using (SqlDataReader reader = cmd.ExecuteReader())
-                {
-                    while (reader.Read())
-                    {
-                        Console.WriteLine($"- {reader["Title"]} (${reader["Price"]})");
+            if (File.Exists(scriptPath)) {
+                string script = File.ReadAllText(scriptPath);
+                string[] commands = script.Split(new string[] { "GO", "go", "Go" }, StringSplitOptions.RemoveEmptyEntries);
+                using (SqlConnection conn = new SqlConnection(connectionStringMaster)) {
+                    conn.Open();
+                    foreach (string cmdText in commands) {
+                        if (string.IsNullOrWhiteSpace(cmdText)) continue;
+                        using (SqlCommand cmd = new SqlCommand(cmdText, conn)) { try { cmd.ExecuteNonQuery(); } catch {} }
                     }
                 }
             }
-        }
-
-        static void RunACIDTests()
-        {
-            Console.WriteLine("\n--- Pruebas ACID ---");
-
-            // 1. Atomicity: Transaction Rollback
-            Console.WriteLine("\n[A] Atomicidad: Intentando transacción fallida...");
-            using (SqlConnection conn = new SqlConnection(GetConnectionString()))
-            {
-                conn.Open();
-                SqlTransaction transaction = conn.BeginTransaction();
-
-                try
-                {
-                    // Step 1: Valid Update
-                    new SqlCommand("UPDATE Books SET Price = 999 WHERE Id = 1", conn, transaction).ExecuteNonQuery();
-                    Console.WriteLine("Paso 1: Precio actualizado (en memoria).");
-
-                    // Step 2: Force Error (Divide by zero)
-                    Console.WriteLine("Paso 2: Generando error intencional...");
-                    throw new Exception("Simulando fallo del sistema antes del Commit.");
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Error capturado: {ex.Message}");
-                    transaction.Rollback();
-                    Console.WriteLine("Rollback ejecutado.");
-                }
-            }
-
-            // Verify Rollback
-            using (SqlConnection conn = new SqlConnection(GetConnectionString()))
-            {
-                conn.Open();
-                decimal price = (decimal)new SqlCommand("SELECT Price FROM Books WHERE Id = 1", conn).ExecuteScalar();
-                Console.WriteLine($"Verificación: El precio sigue siendo {price} (No cambió a 999). Prueba de Atomicidad EXITOSA.");
-            }
-
-            // 2. Consistency: Foreign Key Constraint
-            Console.WriteLine("\n[C] Consistencia: Intentando violar integridad referencial...");
-            using (SqlConnection conn = new SqlConnection(GetConnectionString()))
-            {
-                conn.Open();
-                try
-                {
-                    // Try to insert book with non-existent AuthorId (999)
-                    string invalidInsert = "INSERT INTO Books (Title, ISBN, Price, Stock, AuthorId) VALUES ('Libro Invalido', '999-9999999999', 10.00, 1, 999)";
-                    new SqlCommand(invalidInsert, conn).ExecuteNonQuery();
-                }
-                catch (SqlException ex)
-                {
-                    Console.WriteLine($"Error de SQL capturado: {ex.Message}");
-                    Console.WriteLine("La base de datos rechazó la operación inválida. Prueba de Consistencia EXITOSA.");
-                }
-            }
-
-            // 3. Isolation: Simulate Concurrent Updates
-            Console.WriteLine("\n[I] Aislamiento: Simulando lectura sucia (Dirty Read prevention)...");
-            using (SqlConnection conn1 = new SqlConnection(GetConnectionString()))
-            using (SqlConnection conn2 = new SqlConnection(GetConnectionString()))
-            {
-                conn1.Open();
-                conn2.Open();
-                
-                var transaction1 = conn1.BeginTransaction();
-                
-                // Update in Transaction 1 (Uncommitted)
-                new SqlCommand("UPDATE Books SET Stock = 0 WHERE Id = 1", conn1, transaction1).ExecuteNonQuery();
-                Console.WriteLine("T1: Stock puesto a 0 (sin commit).");
-
-                // Try to Read in Transaction 2
-                Console.WriteLine("T2: Intentando leer Stock...");
-                
-                // Rollback T1
-                transaction1.Rollback();
-                Console.WriteLine("T1: Rollback.");
-                
-                int stock = (int)new SqlCommand("SELECT Stock FROM Books WHERE Id = 1", conn2).ExecuteScalar();
-                Console.WriteLine($"T2: Leyó Stock = {stock}. (Aislamiento mantenido).");
-            }
-
-            // 4. Durability
-             Console.WriteLine("\n[D] Durabilidad: Confirmado por diseño de SQL Server (Write-Ahead Logging).");
-             Console.WriteLine("Una vez que una transacción hace Commit, los datos persisten incluso ante fallos de energía.");
         }
     }
 }
