@@ -6,65 +6,68 @@ Este es un sistema de gestión de libros desarrollado en C# con MS SQL Server, d
 
 ## Caracteristicas Principales
 
-- Interfaz Interactiva Profesional: Menú de consola amigable para gestionar datos en tiempo real.
-- Registro de Auditoria (Logging): Todas las acciones críticas (creaciones, actualizaciones, eliminaciones) se registran en un archivo system_log.txt.
-- Prueba de Volumen (Stress Test): Función integrada para insertar 100 registros en lote para validar el rendimiento.
-- Robustez y Validacion: Sistema a prueba de fallos de formato en entradas de datos.
-- Carga de Autores Inteligente: Permite seleccionar autores existentes o crear uno nuevo automáticamente.
-- Full Stack Dockerized: Aplicación y base de datos orquestadas con Docker Compose.
-- Auto-Provisioning: Script SQL automático para la creación de esquemas y seeding de datos.
-- ACID Testing Suite: Módulo integrado para validar Atomicidad, Consistencia, Aislamiento y Durabilidad.
+- Interfaz Grafica de Usuario (WinForms): Aplicacion de escritorio con tabla visual para gestion de inventario y pruebas ACID interactivas.
+- Interfaz de Consola Profesional: Menu interactivo con sistema de robustez para prevenir cierres inesperados por errores de entrada.
+- Registro de Auditoria (Logging): Todas las acciones criticas se registran en un archivo system_log.txt para seguimiento y seguridad.
+- Prueba de Volumen (Stress Test): Funcion integrada para insertar 100 registros en lote para validar el rendimiento del motor SQL.
+- Carga de Autores Inteligente: Permite seleccionar autores existentes o registrar uno nuevo simplemente escribiendo su nombre.
+- Full Stack Dockerized: Base de datos orquestada con Docker Compose para asegurar portabilidad absoluta.
+- Auto-Provisioning: Script SQL automatico para la creacion de esquemas y seeding de datos iniciales.
 
 ---
 
 ## Stack Tecnologico
 
-- Lenguaje: C# (.NET 8.0)
-- Base de Datos: Microsoft SQL Server 2022
+- Lenguajes: C# (.NET 8.0 / .NET Core)
+- Interfaz Grafica: Windows Forms (WinForms)
+- Base de Datos: Microsoft SQL Server 2022 (Docker Image)
 - Libreria de Datos: Microsoft.Data.SqlClient
 - Infraestructura: Docker / Docker Compose
-- Control de Versiones: Git
+- Pruebas Unitarias: xUnit
 
 ---
 
 ## Modelo de Datos (DER)
 
-El sistema gestiona una relación Uno a Muchos (1:N):
+El sistema gestiona una relacion Uno a Muchos (1:N) con integridad referencial:
 
 - Authors: Id, Name, Bio
 - Books: Id, Title, ISBN, Price, Stock, AuthorId (FK)
 
-El script init.sql asegura que la base de datos BookStoreDB se cree con las restricciones adecuadas de integridad referencial.
+El script init.sql asegura que la base de datos BookStoreDB se cree con las restricciones adecuadas para evitar datos huerfanos.
 
 ---
 
 ## Pruebas ACID (Justificacion)
 
-Este proyecto incluye una suite de pruebas para garantizar la fiabilidad de los datos:
+Este proyecto incluye una suite de pruebas para garantizar la fiabilidad absoluta de los datos:
 
-1. Atomicidad (A): Valida que las transacciones se completen totalmente o se reviertan ante un fallo (Rollback).
-2. Consistencia (C): Asegura que las reglas de negocio (como Llaves Foráneas) se respeten, bloqueando datos inválidos.
-3. Aislamiento (I): Previene "lecturas sucias" (Dirty Reads) mediante el control de concurrencia.
-4. Durabilidad (D): Garantiza que una vez confirmado (Commit), el dato persiste físicamente gracias al diseño de SQL Server.
+1. Atomicidad (A): Valida que las transacciones se completen totalmente o se reviertan ante un fallo (Rollback). Implementado con cuadros de dialogo interactivos en la version grafica.
+2. Consistencia (C): Asegura que las reglas de negocio (como Llaves Foraneas) se respeten, bloqueando datos invalidos en el motor SQL.
+3. Aislamiento (I): Previene "lecturas sucias" (Dirty Reads) mediante el control de concurrencia de SQL Server.
+4. Durabilidad (D): Garantiza que una vez confirmado (Commit), el dato persiste fisicamente incluso ante fallos del sistema.
 
 ---
 
 ## Como Ejecutar
 
-### Opcion 1: Docker (Recomendado)
+### Requisito Previo (Base de Datos)
 
-Solo necesitas tener Docker instalado. Ejecuta:
-
+Asegurate de que Docker este corriendo y ejecuta:
 ```powershell
-docker-compose up -d --build
+docker-compose up -d db
 ```
 
-### Opcion 2: Ejecucion Local e Interaccion (Directa)
+### Opcion 1: Interfaz Grafica (Recomendado para evaluacion)
 
-Para interactuar con el menú y agregar tus propios libros:
+Para abrir la ventana de escritorio con tabla visual:
+```powershell
+dotnet run --project BookSystem.UI/BookSystem.UI.csproj
+```
 
-1. Inicia solo la base de datos: `docker-compose up -d db`
-2. Ejecuta la aplicación:
+### Opcion 2: Interfaz de Consola
+
+Para interactuar mediante el menu de terminal:
 ```powershell
 dotnet run --project App/BookSystem.csproj
 ```
@@ -82,7 +85,7 @@ Puedes conectar herramientas externas (Azure Data Studio, SSMS) usando:
 ---
 
 ## Documentacion
-Para un análisis técnico más profundo, consulta el archivo [DOCUMENTATION.md](./DOCUMENTATION.md).
+Para un analisis tecnico mas profundo sobre la arquitectura y cumplimiento de tareas, consulta el archivo [DOCUMENTATION.md](./DOCUMENTATION.md).
 
 ---
-Desarrollado como proyecto práctico de Sistemas de Información.
+Desarrollado como proyecto practico de Sistemas de Información por Samuel Ortiz.

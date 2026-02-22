@@ -4,63 +4,70 @@ Este proyecto es un sistema de información desarrollado en C# con una base de d
 
 ## 1. Arquitectura del Sistema
 
-El sistema utiliza una arquitectura de contenedores para asegurar que sea portable y fácil de desplegar.
+El sistema utiliza una arquitectura modular para asegurar que sea portable, facil de gestionar y con una interfaz amigable.
 
-- Aplicación (App): Interfaz de consola interactiva con sistema de logging integrado.
-- Base de Datos (DB): Motor MS SQL Server 2022 en un contenedor Docker.
-- Orquestación: Docker Compose para la gestión de servicios y redes.
+- Interfaz Grafica (BookSystem.UI): Aplicacion profesional en Windows Forms que permite realizar CRUD visualmente sobre la base de datos de Docker.
+- Aplicación de Consola (App): Interfaz interactiva para administracion basica y auditoria con sistema de logging.
+- Base de Datos (DB): Motor MS SQL Server 2022 en un contenedor Docker con imagen profesional.
+- Pruebas (App.Tests): Suite de pruebas unitarias en xUnit para asegurar la calidad del codigo y de los datos.
 
 ## 2. Modelo de Datos
 
 ### Entidades y Relaciones
 - Authors (Autores): Id, Name, Bio.
 - Books (Libros): Id, Title, ISBN, Price, Stock, AuthorId.
-- Relación: 1:N (Un Autor -> Muchos Libros). Implementado con Llave Foránea.
+- Relación: 1:N (Un Autor -> Muchos Libros). Implementado con Llave Foranea.
 
 ### Inicialización Inteligente
-El sistema localiza automáticamente el archivo init.sql en múltiples rutas y asegura que la base de datos BookStoreDB esté lista antes de permitir la interacción del usuario.
+El sistema localiza automáticamente el archivo init.sql en múltiples rutas para asegurar que la base de datos BookStoreDB esté lista antes de permitir la interacción.
 
-## 3. Características Avanzadas (Nivel Profesional)
+## 3. Características Avanzadas y Cumplimiento Tareas
 
-El sistema incluye funcionalidades adicionales para entornos de producción:
+El sistema incluye funcionalidades para cumplir con los requerimientos profesionales:
 
-### Registro de Auditoría (Logging)
-- Ubicación: system_log.txt
-- Funcionalidad: Se registra cada acción crítica (inicio de app, creación de autor, inserción de libro, cambio de precio, eliminación). Esto permite rastrear quién hizo qué y cuándo.
+### Interfaz Cliente (Tarea f)
+- Interfaz Grafica: Se desarrollo una aplicacion en Windows Forms con un DataGridView para visualizar los datos en formato de tabla, ofreciendo una experiencia profesional.
+- Registro de Auditoria: Cada accion critica se registra en system_log.txt.
+- Prueba de Volumen: Posibilidad de insertar 100 libros de prueba de forma automatica para evaluar rendimiento.
 
-### Prueba de Volumen (Stress Testing)
-- Funcionalidad: Permite insertar 100 libros de prueba de forma automática.
-- Objetivo: Demostrar que el sistema mantiene su rendimiento y que la base de datos escala correctamente ante la inserción masiva de registros.
+### Pruebas de Datos (Tareas g, Manipulación y ACID)
+- Pruebas de Conexión: El sistema valida el enlace con SQL Server al iniciar.
+- Pruebas ACID: Implementadas tanto en consola como en interfaz grafica con cuadros de dialogo explicativos para Rollback y Commit.
 
-### Interfaz Robusta
-- Validación de Datos: Manejo de errores de formato en entradas numéricas.
-- Creación Dinámica: Al agregar un libro, el usuario puede registrar un nuevo autor al mismo tiempo.
-
-## 4. Pruebas ACID Implementadas
+## 4. Pruebas ACID Implementadas (Justificacion)
 
 ### A - Atomicidad (Atomicity)
-- Prueba: Transacción con fallo simulado y Rollback automático.
+- Prueba: Se modifica un precio y se fuerza un error simulado mediante MessageBox.
+- Justificación: Se demuestra que SQL Server deshace el cambio si la operacion no termina, manteniendo el precio original.
 
 ### C - Consistencia (Consistency)
-- Prueba: Violación de integridad referencial.
+- Prueba: Insercion de datos invalidos.
+- Justificación: Impide la entrada de datos que rompan las reglas de integridad referencial.
 
 ### I - Aislamiento (Isolation)
 - Prueba: Prevención de lecturas sucias (Dirty Reads).
+- Justificación: Asegura que los cambios no confirmados no afecten a otros usuarios concurrentes.
 
 ### D - Durabilidad (Durability)
-- Justificación: Garantía de persistencia física tras el Commit.
+- Justificación: Garantía de persistencia física de la base de datos tras el Commit mediante el registro de transacciones de SQL Server.
 
 ## 5. Instrucciones de Ejecución
 
-### Despliegue con Docker
+### Despliegue de Base de Datos
 ```powershell
-docker-compose up -d --build
+docker-compose up -d db
 ```
 
-### Ejecución de la Interfaz
+### Ejecución de Interfaz Gráfica
+```powershell
+dotnet run --project BookSystem.UI/BookSystem.UI.csproj
+```
+
+### Ejecución de Interfaz de Consola
 ```powershell
 dotnet run --project App/BookSystem.csproj
 ```
 
 ---
 Documentación técnica actualizada el 20 de Febrero de 2026.
+Desarrollado por Samuel Ortiz.
