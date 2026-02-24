@@ -9,71 +9,173 @@ namespace BookSystem.UI
 {
     public partial class MainForm : Form
     {
+        // Colores Modernos (Paleta Dashboard)
+        private readonly Color PrimaryColor = Color.FromArgb(44, 62, 80);    // Midnight Blue
+        private readonly Color SecondaryColor = Color.FromArgb(52, 152, 219); // Bright Blue
+        private readonly Color SuccessColor = Color.FromArgb(39, 174, 96);   // Emerald Green
+        private readonly Color DangerColor = Color.FromArgb(192, 57, 43);    // Alizarin Red
+        private readonly Color BackgroundColor = Color.FromArgb(236, 240, 241); // Clouds Grey
+        private readonly Color TextColor = Color.FromArgb(255, 255, 255);
+
         private DataGridView dgvBooks;
         private TextBox txtTitle, txtISBN, txtPrice, txtStock, txtAuthorId;
         private Label lblStatus;
 
-        private string ConnectionString => "Server=localhost,1433;Database=BookStoreDB;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True;Encrypt=False;";
+        private string ConnectionString => "Server=127.0.0.1,1433;Database=BookStoreDB;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True;Encrypt=False;";
 
         public MainForm()
         {
             InitializeComponent();
-            SetupUI();
+            SetupModernUI();
             LoadData();
         }
 
-        private void SetupUI()
+        private void SetupModernUI()
         {
-            this.Text = "BookSystem Professional - Gestion de Inventario";
-            this.Size = new Size(1000, 700);
+            // Configuracion de Ventana
+            this.Text = "BookSystem ERP - Modulo de Inventario";
+            this.Size = new Size(1100, 750);
             this.StartPosition = FormStartPosition.CenterScreen;
-            this.BackColor = Color.FromArgb(240, 240, 240);
+            this.BackColor = BackgroundColor;
+            this.Font = new Font("Segoe UI", 10);
 
-            Panel pnlInput = new Panel { Dock = DockStyle.Top, Height = 170, Padding = new Padding(20), BackColor = Color.White };
-            
-            int x = 20, y = 20;
-            AddInput(pnlInput, "Titulo del Libro:", ref txtTitle, x, y, 250);
-            AddInput(pnlInput, "ISBN:", ref txtISBN, x + 270, y, 150);
-            AddInput(pnlInput, "Precio:", ref txtPrice, x + 440, y, 100);
-            AddInput(pnlInput, "Stock:", ref txtStock, x + 560, y, 80);
-            AddInput(pnlInput, "Autor (ID o Nombre):", ref txtAuthorId, x + 660, y, 200);
-
-            Button btnAdd = new Button { Text = "Guardar", Location = new Point(20, 90), Size = new Size(140, 45), BackColor = Color.FromArgb(0, 122, 204), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
-            btnAdd.Click += (s, e) => AddBook();
-            pnlInput.Controls.Add(btnAdd);
-
-            Button btnDelete = new Button { Text = "Eliminar Seleccionado", Location = new Point(170, 90), Size = new Size(200, 45), BackColor = Color.FromArgb(220, 53, 69), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
-            btnDelete.Click += (s, e) => DeleteSelected();
-            pnlInput.Controls.Add(btnDelete);
-
-            Button btnRefresh = new Button { Text = "Refrescar", Location = new Point(380, 90), Size = new Size(140, 45), BackColor = Color.FromArgb(40, 167, 69), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
-            btnRefresh.Click += (s, e) => LoadData();
-            pnlInput.Controls.Add(btnRefresh);
-
-            Button btnACID = new Button { Text = "Prueba ACID", Location = new Point(530, 90), Size = new Size(140, 45), BackColor = Color.FromArgb(108, 117, 125), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
-            btnACID.Click += (s, e) => RunACIDTest();
-            pnlInput.Controls.Add(btnACID);
-
-            dgvBooks = new DataGridView { 
-                Dock = DockStyle.Fill, 
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
-                BackgroundColor = Color.White,
-                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-                ReadOnly = true,
-                AllowUserToAddRows = false
+            // 1. PANEL LATERAL (Sidebar)
+            Panel pnlSidebar = new Panel {
+                Dock = DockStyle.Left,
+                Width = 220,
+                BackColor = PrimaryColor,
+                Padding = new Padding(10)
             };
 
-            lblStatus = new Label { Dock = DockStyle.Bottom, Height = 35, Text = " Listo.", TextAlign = ContentAlignment.MiddleLeft, BackColor = Color.FromArgb(220, 220, 220) };
+            Label lblLogo = new Label {
+                Text = "BOOK SYSTEM\nADMIN",
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI Semibold", 14, FontStyle.Bold),
+                Height = 80,
+                Dock = DockStyle.Top,
+                TextAlign = ContentAlignment.MiddleCenter
+            };
+            pnlSidebar.Controls.Add(lblLogo);
 
-            this.Controls.Add(dgvBooks);
-            this.Controls.Add(pnlInput);
+            // Botones del Sidebar
+            AddSidebarButton(pnlSidebar, "Refrescar Lista", SecondaryColor, (s, e) => LoadData());
+            AddSidebarButton(pnlSidebar, "Eliminar Registro", DangerColor, (s, e) => DeleteSelected());
+            AddSidebarButton(pnlSidebar, "Prueba ACID", Color.FromArgb(142, 68, 173), (s, e) => RunACIDTest()); // Purple
+
+            // 2. PANEL DE CABECERA
+            Panel pnlHeader = new Panel {
+                Dock = DockStyle.Top,
+                Height = 60,
+                BackColor = Color.White,
+                Padding = new Padding(20, 0, 0, 0)
+            };
+            Label lblTitle = new Label {
+                Text = "Panel de Gestion de Libros e Inventario",
+                ForeColor = PrimaryColor,
+                Font = new Font("Segoe UI Semibold", 16),
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+            pnlHeader.Controls.Add(lblTitle);
+
+            // 3. AREA CENTRAL (Inputs + Grid)
+            Panel pnlMain = new Panel { Dock = DockStyle.Fill, Padding = new Padding(20) };
+
+            // Tarjeta de Inputs (Card)
+            Panel pnlCard = new Panel {
+                Dock = DockStyle.Top,
+                Height = 180,
+                BackColor = Color.White,
+                Padding = new Padding(20)
+            };
+            
+            int x = 20, y = 20;
+            AddModernInput(pnlCard, "Titulo del Libro", ref txtTitle, x, y, 300);
+            AddModernInput(pnlCard, "ISBN", ref txtISBN, x + 330, y, 150);
+            AddModernInput(pnlCard, "Precio ($)", ref txtPrice, x + 500, y, 100);
+            AddModernInput(pnlCard, "Stock", ref txtStock, x + 620, y, 80);
+            AddModernInput(pnlCard, "Autor (ID o Nombre)", ref txtAuthorId, x + 720, y, 200);
+
+            Button btnSave = new Button {
+                Text = "REGISTRAR LIBRO",
+                Location = new Point(20, 100),
+                Size = new Size(200, 45),
+                BackColor = SuccessColor,
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnSave.FlatAppearance.BorderSize = 0;
+            btnSave.Click += (s, e) => AddBook();
+            pnlCard.Controls.Add(btnSave);
+
+            // Grid Styling
+            dgvBooks = new DataGridView { 
+                Dock = DockStyle.Fill, 
+                BackgroundColor = Color.White,
+                BorderStyle = BorderStyle.None,
+                EnableHeadersVisualStyles = false,
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                ReadOnly = true,
+                AllowUserToAddRows = false,
+                RowHeadersVisible = false,
+                RowTemplate = { Height = 35 },
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+            };
+            dgvBooks.ColumnHeadersDefaultCellStyle.BackColor = PrimaryColor;
+            dgvBooks.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
+            dgvBooks.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI Semibold", 10);
+            dgvBooks.ColumnHeadersDefaultCellStyle.Padding = new Padding(5);
+            dgvBooks.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(248, 249, 250);
+
+            // Footer
+            lblStatus = new Label {
+                Dock = DockStyle.Bottom,
+                Height = 35,
+                Text = " Sistema Conectado a SQL Server Local",
+                TextAlign = ContentAlignment.MiddleLeft,
+                BackColor = Color.White,
+                ForeColor = Color.Gray
+            };
+
+            pnlMain.Controls.Add(dgvBooks);
+            pnlMain.Controls.Add(new Label { Dock = DockStyle.Top, Height = 20 }); // Espaciador
+            pnlMain.Controls.Add(pnlCard);
+
+            this.Controls.Add(pnlMain);
+            this.Controls.Add(pnlHeader);
+            this.Controls.Add(pnlSidebar);
             this.Controls.Add(lblStatus);
         }
 
-        private void AddInput(Panel p, string label, ref TextBox tb, int x, int y, int width)
+        private void AddSidebarButton(Panel parent, string text, Color color, EventHandler click)
         {
-            Label lbl = new Label { Text = label, Location = new Point(x, y), AutoSize = true };
-            tb = new TextBox { Location = new Point(x, y + 22), Width = width };
+            Button btn = new Button {
+                Text = text,
+                Dock = DockStyle.Top,
+                Height = 50,
+                FlatStyle = FlatStyle.Flat,
+                ForeColor = Color.White,
+                BackColor = PrimaryColor,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Padding = new Padding(15, 0, 0, 0),
+                Cursor = Cursors.Hand
+            };
+            btn.FlatAppearance.BorderSize = 0;
+            btn.FlatAppearance.MouseOverBackColor = color;
+            btn.Click += click;
+            parent.Controls.Add(btn);
+            
+            // Espaciador
+            Panel spacer = new Panel { Dock = DockStyle.Top, Height = 5 };
+            parent.Controls.Add(spacer);
+        }
+
+        private void AddModernInput(Panel p, string label, ref TextBox tb, int x, int y, int width)
+        {
+            Label lbl = new Label { Text = label, Location = new Point(x, y), AutoSize = true, ForeColor = Color.Gray, Font = new Font("Segoe UI", 9) };
+            tb = new TextBox { Location = new Point(x, y + 25), Width = width, BorderStyle = BorderStyle.FixedSingle };
             p.Controls.Add(lbl);
             p.Controls.Add(tb);
         }
@@ -83,36 +185,38 @@ namespace BookSystem.UI
             try {
                 using (SqlConnection conn = new SqlConnection(ConnectionString)) {
                     conn.Open();
-                    SqlDataAdapter adapter = new SqlDataAdapter("SELECT B.Id, B.Title, B.ISBN, B.Price, B.Stock, A.Name as Autor FROM Books B JOIN Authors A ON B.AuthorId = A.Id ORDER BY B.Id DESC", conn);
+                    string sql = "SELECT B.Id, B.Title as TITULO, B.ISBN, B.Price as PRECIO, B.Stock as STOCK, A.Name as AUTOR FROM Books B JOIN Authors A ON B.AuthorId = A.Id ORDER BY B.Id DESC";
+                    SqlDataAdapter adapter = new SqlDataAdapter(sql, conn);
                     DataTable dt = new DataTable();
                     adapter.Fill(dt);
                     dgvBooks.DataSource = dt;
-                    lblStatus.Text = $" {dt.Rows.Count} libros cargados.";
+                    lblStatus.Text = $" Auditoria: {dt.Rows.Count} registros sincronizados.";
                 }
             } catch (Exception ex) {
-                MessageBox.Show("Error: " + ex.Message);
+                MessageBox.Show("Error de Sincronizacion: " + ex.Message, "System Error");
             }
         }
 
         private void AddBook()
         {
+            if (string.IsNullOrWhiteSpace(txtTitle.Text)) return;
             try {
                 using (SqlConnection conn = new SqlConnection(ConnectionString)) {
                     conn.Open();
                     int authorId;
                     if (int.TryParse(txtAuthorId.Text, out int id)) authorId = id;
                     else {
-                        string sqlA = "INSERT INTO Authors (Name, Bio) OUTPUT INSERTED.Id VALUES (@n, 'Nuevo')";
+                        string sqlA = "INSERT INTO Authors (Name, Bio) OUTPUT INSERTED.Id VALUES (@n, 'Registro Automatico UI')";
                         using (SqlCommand cmdA = new SqlCommand(sqlA, conn)) {
-                            cmdA.Parameters.AddWithValue("@n", txtAuthorId.Text);
+                            cmdA.Parameters.AddWithValue("@n", txtAuthorId.Text.Trim());
                             authorId = (int)(cmdA.ExecuteScalar() ?? 0);
                         }
                     }
 
                     string sqlB = "INSERT INTO Books (Title, ISBN, Price, Stock, AuthorId) VALUES (@t, @i, @p, @s, @a)";
                     using (SqlCommand cmdB = new SqlCommand(sqlB, conn)) {
-                        cmdB.Parameters.AddWithValue("@t", txtTitle.Text);
-                        cmdB.Parameters.AddWithValue("@i", txtISBN.Text);
+                        cmdB.Parameters.AddWithValue("@t", txtTitle.Text.Trim());
+                        cmdB.Parameters.AddWithValue("@i", txtISBN.Text.Trim());
                         cmdB.Parameters.AddWithValue("@p", decimal.Parse(txtPrice.Text.Replace(",", ".")));
                         cmdB.Parameters.AddWithValue("@s", int.Parse(txtStock.Text));
                         cmdB.Parameters.AddWithValue("@a", authorId);
@@ -122,34 +226,19 @@ namespace BookSystem.UI
                     ClearInputs();
                 }
             } catch (Exception ex) {
-                MessageBox.Show("Fallo al guardar: " + ex.Message);
+                MessageBox.Show("Validacion fallida: " + ex.Message);
             }
         }
 
         private void DeleteSelected()
         {
-            if (dgvBooks.SelectedRows.Count == 0) {
-                MessageBox.Show("Selecciona un libro en la tabla para eliminarlo.");
-                return;
-            }
-
-            var selectedRow = dgvBooks.SelectedRows[0];
-            if (selectedRow.Cells["Id"].Value == null) return;
-
-            int id = Convert.ToInt32(selectedRow.Cells["Id"].Value);
-            
-            DialogResult res = MessageBox.Show($"Deseas eliminar el libro con ID {id}?", "Confirmar Borrado", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
-            
-            if (res == DialogResult.Yes) {
-                try {
-                    using (SqlConnection conn = new SqlConnection(ConnectionString)) {
-                        conn.Open();
-                        new SqlCommand($"DELETE FROM Books WHERE Id = {id}", conn).ExecuteNonQuery();
-                        lblStatus.Text = $" Libro con ID {id} eliminado con exito.";
-                        LoadData();
-                    }
-                } catch (Exception ex) {
-                    MessageBox.Show("Fallo al borrar: " + ex.Message);
+            if (dgvBooks.SelectedRows.Count == 0) return;
+            int id = Convert.ToInt32(dgvBooks.SelectedRows[0].Cells["Id"].Value);
+            if (MessageBox.Show($"Seguro que desea eliminar el registro {id}?", "Confirmar", MessageBoxButtons.YesNo) == DialogResult.Yes) {
+                using (SqlConnection conn = new SqlConnection(ConnectionString)) {
+                    conn.Open();
+                    new SqlCommand($"DELETE FROM Books WHERE Id = {id}", conn).ExecuteNonQuery();
+                    LoadData();
                 }
             }
         }
@@ -161,13 +250,15 @@ namespace BookSystem.UI
                 using (SqlTransaction trans = conn.BeginTransaction()) {
                     try {
                         new SqlCommand("UPDATE Books SET Price = 99999 WHERE Id = 1", conn, trans).ExecuteNonQuery();
-                        DialogResult res = MessageBox.Show("Paso 1: Precio de ID 1 cambiado a 99999 (en memoria).\nDesea simular un error para probar el ROLLBACK?", "Atomicidad", MessageBoxButtons.YesNo);
-                        if (res == DialogResult.Yes) throw new Exception("Error simulado.");
+                        string msg = "PASO 1: Transaccion iniciada (Precio ID 1 -> 99999).\n¿Desea forzar un error para validar el ROLLBACK?";
+                        if (MessageBox.Show(msg, "Prueba de Atomicidad", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes) {
+                            throw new Exception("Error provocado por el usuario.");
+                        }
                         trans.Commit();
-                        MessageBox.Show("COMMIT exitoso.");
-                    } catch {
+                        MessageBox.Show("COMMIT: Datos guardados permanentemente.");
+                    } catch (Exception ex) {
                         trans.Rollback();
-                        MessageBox.Show("ROLLBACK ejecutado: Los datos no cambiaron.", "Prueba ACID OK");
+                        MessageBox.Show("ROLLBACK: Los datos han vuelto a su estado original.\nMotivo: " + ex.Message, "Prueba ACID Exitosa");
                     }
                 }
                 LoadData();
